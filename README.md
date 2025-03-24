@@ -23,6 +23,7 @@ LangChain/
 │── LangChainPrompts/     # Prompt engineering experiments
 │── LLMs/                 # General LLM-related scripts
 │── OutputParsers/        # JSON, Pydantic, and structured output parsers
+│── Runnables/            # Usecase of different types of runnables in LangChain
 │── langchainenv/         # Virtual environment (excluded from Git)
 │── .env                  # API keys & environment variables (excluded from Git)
 │── requirements.txt      # Dependencies
@@ -79,6 +80,7 @@ python ChatModels/chatmodel_google.py
 ✔️ Developed **custom prompt templates**\
 ✔️ Implemented **document embeddings & similarity**\
 ✔️ Used **structured output parsers** (JSON, Pydantic)\
+✔️ Learned and Used **various types of runnables**\
 
 
 
