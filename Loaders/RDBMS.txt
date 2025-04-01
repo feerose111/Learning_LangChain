@@ -1,0 +1,167 @@
+1.
+-- Create ProductCategory Table
+CREATE TABLE ProductCategory (
+    CategoryId INT PRIMARY KEY IDENTITY(1,1),
+    CategoryName NVARCHAR(255) NOT NULL,
+    CONSTRAINT UQ_CategoryName UNIQUE (CategoryName)
+);
+
+-- Create Product Table
+CREATE TABLE Product (
+    ProductId INT PRIMARY KEY IDENTITY(1,1),
+    Name NVARCHAR(255) NOT NULL,
+    Quantity INT,
+    Discount DECIMAL(5,2),
+    Price DECIMAL(10,2) CHECK (Price > 0),
+    ProductCategoryRef_Id INT FOREIGN KEY REFERENCES ProductCategory(CategoryId) ON DELETE SET NULL,
+    CreatedDate DATETIME DEFAULT GETDATE(),
+    ProductCode NVARCHAR(50) UNIQUE,
+    CONSTRAINT CHK_Quantity CHECK (Quantity >= 0)
+);
+
+-- Create Country Table
+CREATE TABLE Country (
+    CountryId INT PRIMARY KEY IDENTITY(1,1),
+    Name NVARCHAR(255) NOT NULL,
+    CONSTRAINT UQ_CountryName UNIQUE (Name)
+);
+
+-- Create Address Table
+CREATE TABLE Address (
+    AddressId INT PRIMARY KEY IDENTITY(1,1),
+    City NVARCHAR(255),
+    Street NVARCHAR(255),
+    CountryId INT FOREIGN KEY REFERENCES Country(CountryId) ON DELETE SET NULL
+);
+
+-- Create Customer Table
+CREATE TABLE Customer (
+    CustomerId INT PRIMARY KEY IDENTITY(1,1),
+    AddressRef_Id INT FOREIGN KEY REFERENCES Address(AddressId) ON DELETE SET NULL,
+    Name NVARCHAR(255) NOT NULL,
+    EmailAddress NVARCHAR(255) UNIQUE,
+    PhoneNumber NVARCHAR(20),
+    CONSTRAINT CHK_PhoneNumber CHECK (LEN(PhoneNumber) >= 10)
+);
+
+-- Create PurchaseOrder Table
+CREATE TABLE PurchaseOrder (
+    PurchaseOrderId INT PRIMARY KEY IDENTITY(1,1),
+    ProductRef_Id INT FOREIGN KEY REFERENCES Product(ProductId) ON DELETE CASCADE,
+    CustomerRef_Id INT FOREIGN KEY REFERENCES Customer(CustomerId) ON DELETE CASCADE,
+    OrderDate DATETIME DEFAULT GETDATE(),
+    PaymentTotal DECIMAL(10,2),
+    OrderQuantity INT CHECK (OrderQuantity > 0)
+);
+
+--1.1
+INSERT INTO ProductCategory (CategoryName) VALUES 
+('Category A'), ('Category B'), ('Category C'), ('Category D'), ('Category E'), ('Category F');
+
+INSERT INTO Product (Name, Quantity, Discount, Price, ProductCategoryRef_Id, ProductCode) 
+VALUES ('Product 1', 10, 5.00, 100.00, 1, 'CODE001'),
+       ('Product 2', 50, 2.00, 50.00, 2, 'CODE002'),
+       ('Product 3', 5, 10.00, 200.00, 3, 'CODE003'),
+       ('Product 4', 15, 0.00, 25.00, 4, 'CODE004'),
+       ('Product 5', 30, 5.00, 15.00, 5, 'CODE005'),
+       ('Product 6', 100, 0.50, 5.00, 6, 'CODE006');
+
+INSERT INTO Country (Name) VALUES ('Country A'), ('Country B'), ('Country C'), ('Country D'), ('Country E'), ('Country F');
+
+INSERT INTO Address (City, Street, CountryId) VALUES 
+('City A', 'Street A', 1), 
+('City B', 'Street B', 2),
+('City C', 'Street C', 3),
+('City D', 'Street D', 4),
+('City E', 'Street E', 5),
+('City F', 'Street F', 6);
+
+INSERT INTO Customer (AddressRef_Id, Name, EmailAddress, PhoneNumber) 
+VALUES (1, 'Customer 1', 'customer1@example.com', '1234567890'),
+       (2, 'Customer 2', 'customer2@example.com', '9876543210'),
+       (3, 'Customer 3', 'customer3@example.com', '5678901234'),
+       (4, 'Customer 4', 'customer4@example.com', '6789012345'),
+       (5, 'Customer 5', 'customer5@example.com', '7890123456'),
+       (6, 'Customer 6', 'customer6@example.com', '8901234567');
+
+INSERT INTO PurchaseOrder (ProductRef_Id, CustomerRef_Id, PaymentTotal, OrderQuantity) 
+VALUES (1, 1, 100.00, 1),
+       (2, 2, 100.00, 2),
+       (3, 3, 200.00, 1),
+       (4, 4, 50.00, 2),
+       (5, 5, 75.00, 5),
+       (6, 6, 30.00, 3);
+
+
+--Select Data from Tables
+SELECT * FROM Product;
+SELECT * FROM Customer;
+SELECT * FROM PurchaseOrder;
+SELECT * FROM ProductCategory;
+
+
+--1.2 Aggregate Queries
+SELECT MAX(Price) AS MaxPrice, MIN(Price) AS MinPrice, AVG(Price) AS AvgPrice FROM Product;
+
+--1.3 Grouping Query
+SELECT p.ProductCategoryRef_Id AS CategoryId, COUNT(*) AS NumberOfProducts, SUM(p.Price) AS TotalPrice
+FROM Product p
+GROUP BY p.ProductCategoryRef_Id;
+
+--1.4 Inner Join Query
+SELECT p.Name AS ProductName, pc.CategoryName
+FROM Product p
+INNER JOIN ProductCategory pc ON p.ProductCategoryRef_Id = pc.CategoryId;
+
+--1.5 Left Outer Join Query
+SELECT p.Name AS ProductName, p.Price, pc.CategoryName
+FROM Product p
+LEFT JOIN ProductCategory pc ON p.ProductCategoryRef_Id = pc.CategoryId
+ORDER BY p.Name;
+
+--1.6 Create a View for Total Orders per Customer
+CREATE VIEW CustomerOrders AS
+SELECT c.CustomerId, c.Name, COUNT(po.PurchaseOrderId) AS TotalOrders, SUM(po.PaymentTotal) AS TotalAmount
+FROM Customer c
+LEFT JOIN PurchaseOrder po ON c.CustomerId = po.CustomerRef_Id
+GROUP BY c.CustomerId, c.Name;
+
+-- Select total orders and total amount per customer from the view
+SELECT * FROM CustomerOrders;
+
+--2. Stored Procedure to Apply Markup to Prices
+CREATE PROCEDURE ApplyMarkup (@MarkupAmount DECIMAL(5,2), @CategoryId INT)
+AS
+BEGIN
+    UPDATE Product
+    SET Price = Price + @MarkupAmount
+    WHERE ProductCategoryRef_Id = @CategoryId;
+    
+    SELECT COUNT(*) AS TotalItems FROM Product WHERE ProductCategoryRef_Id = @CategoryId;
+END;
+--Execute the Stored Procedure
+EXEC ApplyMarkup @MarkupAmount = 10.00, @CategoryId = 1;
+
+--3. SQL Function to Calculate Percentage Sales per Category
+CREATE FUNCTION CalculateCategorySalesPercentage ()
+RETURNS @Result TABLE (
+    CategoryId INT,
+    CategoryName NVARCHAR(255),
+    TotalSales DECIMAL(10,2),
+    SalesPercentage DECIMAL(10,2)
+)
+AS
+BEGIN
+    INSERT INTO @Result
+    SELECT pc.CategoryId, pc.CategoryName,
+           SUM(po.PaymentTotal) AS TotalSales,
+           (SUM(po.PaymentTotal) * 100.0 / NULLIF((SELECT SUM(PaymentTotal) FROM PurchaseOrder), 0)) AS SalesPercentage
+    FROM ProductCategory pc
+    JOIN Product p ON pc.CategoryId = p.ProductCategoryRef_Id
+    JOIN PurchaseOrder po ON p.ProductId = po.ProductRef_Id
+    GROUP BY pc.CategoryId, pc.CategoryName;
+
+    RETURN;
+END;
+--Execute the Function CalculateCategorySalesPercentage
+SELECT * FROM CalculateCategorySalesPercentage();
