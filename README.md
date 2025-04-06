@@ -22,6 +22,7 @@ LangChain/
 │── Embedded/             # Document similarity & embeddings
 │── LangChainPrompts/     # Prompt engineering experiments
 │── LLMs/                 # General LLM-related scripts
+│── Loaders/              # Implementation of document loaders
 │── OutputParsers/        # JSON, Pydantic, and structured output parsers
 │── Runnables/            # Usecase of different types of runnables in LangChain
 │── langchainenv/         # Virtual environment (excluded from Git)
@@ -81,6 +82,7 @@ python ChatModels/chatmodel_google.py
 ✔️ Implemented **document embeddings & similarity**\
 ✔️ Used **structured output parsers** (JSON, Pydantic)\
 ✔️ Learned and Used **various types of runnables**\
+✔️ Implemented various Loaders **Types and usecases of document loaders**\
 
 
 
